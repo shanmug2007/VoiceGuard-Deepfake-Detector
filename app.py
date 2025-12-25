@@ -3,7 +3,6 @@ import librosa
 import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="VoiceGuard Forensics", page_icon="🕵️‍♂️", layout="wide")
@@ -24,12 +23,10 @@ def analyze_audio_forensics(audio_path):
     evidence = []
     
     # --- TEST 1: FREQUENCY CUTOFF CHECK ---
-    # Real mics capture frequencies up to 22kHz+. 
-    # AI models (like Tacotron/RVC) often cut off at 16kHz-20kHz.
+    # UPDATED: Lowered threshold to 14kHz to accept standard laptop mics as Human
     stft = np.abs(librosa.stft(y))
     energy = np.sum(stft, axis=1)
     
-    # Find the frequency where energy drops to almost zero
     cumulative_energy = np.cumsum(energy)
     total_energy = cumulative_energy[-1]
     threshold_idx = np.searchsorted(cumulative_energy, total_energy * 0.99)
@@ -38,32 +35,28 @@ def analyze_audio_forensics(audio_path):
     
     if cutoff_freq < 14000:
         ai_score += 50
-        evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Typical of older AI models)")
-    elif cutoff_freq < 21000:
-        ai_score += 20
-        evidence.append(f"⚠️ **Suspicious Frequency Drop at {int(cutoff_freq)}Hz.** (Possible High-Quality AI)")
+        evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Likely AI/Low-Quality)")
     else:
-        evidence.append(f"✅ **Full Frequency Range ({int(cutoff_freq)}Hz).** (Consistent with real microphones)")
+        evidence.append(f"✅ **Full Frequency Range ({int(cutoff_freq)}Hz).** (Natural)")
 
     # --- TEST 2: SILENCE PATTERN ANALYSIS ---
-    # AI generates "perfect" digital silence (0.0000). Real recordings have noise.
+    # UPDATED: Made silence check stricter (needs to be near absolute zero to flag as AI)
     rms = librosa.feature.rms(y=y)[0]
     min_silence = np.min(rms)
     
-    if min_silence < 0.000001: # Extremely clean silence
-        ai_score += 35
+    if min_silence < 0.0000001: 
+        ai_score += 30
         evidence.append("⚠️ **Unnatural 'Digital Silence' detected.** (Lack of room tone)")
     else:
         evidence.append("✅ **Natural Background Noise detected.** (Room tone present)")
 
     # --- TEST 3: DISPERSION / JITTER ---
-    # Human voices vary slightly in pitch stability. AI is often too stable.
     zero_crossings = librosa.zero_crossings(y, pad=False)
     zc_variation = np.var(zero_crossings)
     
-    if zc_variation < 0.04: # Very stable/consistent signal
-        ai_score += 25
-        evidence.append("⚠️ **Signal is statistically too 'smooth'.** (Lacks organic jitter)")
+    if zc_variation < 0.02:
+        ai_score += 20
+        evidence.append("⚠️ **Signal is too smooth.** (Lacks organic jitter)")
     
     return min(ai_score, 100), evidence, y, sr
 
@@ -88,6 +81,7 @@ if uploaded_file is not None:
             
             # --- SHOW VERDICT ---
             st.divider()
+            # If score is high (>50), it's AI. If low, it's Human.
             if score > 50:
                 st.error(f"🚨 **VERDICT: AI / SYNTHETIC VOICE** (Confidence: {score}%)")
             else:
@@ -108,7 +102,5 @@ if uploaded_file is not None:
                 D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
                 img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax)
                 fig.colorbar(img, ax=ax, format="%+2.0f dB")
-                ax.set_title("Frequency Heatmap (Black bar at top = AI)")
-
-                st.pyplot(fig)
-
+                ax.set_title("Frequency Heatmap")
+                st.pyplot

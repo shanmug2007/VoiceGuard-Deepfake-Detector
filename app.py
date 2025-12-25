@@ -33,12 +33,12 @@ def analyze_audio_forensics(audio_path):
     freqs = librosa.fft_frequencies(sr=sr)
     cutoff_freq = freqs[threshold_idx]
     
+   # MODIFIED: Increased penalty from 50 to 60 so low-quality AI triggers RED immediately
     if cutoff_freq < 14000:
-        ai_score += 50
+        ai_score += 60  # <--- CHANGED THIS FROM 50 TO 60
         evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Likely AI/Low-Quality)")
     else:
         evidence.append(f"✅ **Full Frequency Range ({int(cutoff_freq)}Hz).** (Natural)")
-
     # --- TEST 2: SILENCE PATTERN ANALYSIS ---
     # UPDATED: Made silence check stricter (needs to be near absolute zero to flag as AI)
     rms = librosa.feature.rms(y=y)[0]
@@ -104,3 +104,4 @@ if uploaded_file is not None:
                 fig.colorbar(img, ax=ax, format="%+2.0f dB")
                 ax.set_title("Frequency Heatmap")
                 st.pyplot
+

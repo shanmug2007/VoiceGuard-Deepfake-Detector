@@ -36,8 +36,8 @@ def analyze_audio_forensics(audio_path):
     freqs = librosa.fft_frequencies(sr=sr)
     cutoff_freq = freqs[threshold_idx]
     
-    if cutoff_freq < 8000:
-        ai_score += 40
+    if cutoff_freq < 14000:
+        ai_score += 50
         evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Typical of older AI models)")
     elif cutoff_freq < 21000:
         ai_score += 20
@@ -111,3 +111,4 @@ if uploaded_file is not None:
                 ax.set_title("Frequency Heatmap (Black bar at top = AI)")
 
                 st.pyplot(fig)
+

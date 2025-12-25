@@ -33,19 +33,19 @@ def analyze_audio_forensics(audio_path):
     freqs = librosa.fft_frequencies(sr=sr)
     cutoff_freq = freqs[threshold_idx]
     
-   # MODIFIED: Increased penalty from 50 to 60 so low-quality AI triggers RED immediately
     if cutoff_freq < 14000:
-        ai_score += 60  # <--- CHANGED THIS FROM 50 TO 60
+        ai_score += 60 # INCREASED WEIGHT: Strict penalty for low-quality audio
         evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Likely AI/Low-Quality)")
     else:
         evidence.append(f"✅ **Full Frequency Range ({int(cutoff_freq)}Hz).** (Natural)")
+
     # --- TEST 2: SILENCE PATTERN ANALYSIS ---
     # UPDATED: Made silence check stricter (needs to be near absolute zero to flag as AI)
     rms = librosa.feature.rms(y=y)[0]
     min_silence = np.min(rms)
     
     if min_silence < 0.0000001: 
-        ai_score += 30
+        ai_score += 40 # INCREASED WEIGHT
         evidence.append("⚠️ **Unnatural 'Digital Silence' detected.** (Lack of room tone)")
     else:
         evidence.append("✅ **Natural Background Noise detected.** (Room tone present)")
@@ -82,7 +82,7 @@ if uploaded_file is not None:
             # --- SHOW VERDICT ---
             st.divider()
             # If score is high (>50), it's AI. If low, it's Human.
-            if score > 50:
+            if score >= 50: # UPDATED: >= 50 catches the edge cases
                 st.error(f"🚨 **VERDICT: AI / SYNTHETIC VOICE** (Confidence: {score}%)")
             else:
                 st.success(f"✅ **VERDICT: HUMAN / NATURAL VOICE** (Confidence: {100-score}%)")
@@ -103,5 +103,4 @@ if uploaded_file is not None:
                 img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax)
                 fig.colorbar(img, ax=ax, format="%+2.0f dB")
                 ax.set_title("Frequency Heatmap")
-                st.pyplot
-
+                st.pyplot(fig)

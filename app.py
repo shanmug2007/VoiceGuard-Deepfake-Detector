@@ -36,7 +36,7 @@ def analyze_audio_forensics(audio_path):
     freqs = librosa.fft_frequencies(sr=sr)
     cutoff_freq = freqs[threshold_idx]
     
-    if cutoff_freq < 17000:
+    if cutoff_freq < 8000:
         ai_score += 40
         evidence.append(f"⚠️ **Hard Frequency Cutoff detected at {int(cutoff_freq)}Hz.** (Typical of older AI models)")
     elif cutoff_freq < 21000:
@@ -50,7 +50,7 @@ def analyze_audio_forensics(audio_path):
     rms = librosa.feature.rms(y=y)[0]
     min_silence = np.min(rms)
     
-    if min_silence < 0.0001: # Extremely clean silence
+    if min_silence < 0.000001: # Extremely clean silence
         ai_score += 35
         evidence.append("⚠️ **Unnatural 'Digital Silence' detected.** (Lack of room tone)")
     else:
@@ -109,4 +109,5 @@ if uploaded_file is not None:
                 img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax)
                 fig.colorbar(img, ax=ax, format="%+2.0f dB")
                 ax.set_title("Frequency Heatmap (Black bar at top = AI)")
+
                 st.pyplot(fig)
